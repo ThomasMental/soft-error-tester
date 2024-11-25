@@ -1,36 +1,35 @@
 #include <iostream>
 #include <fstream>
+#include <cstdio> 
 #include "cuda_kernels.cuh"
 
 int main() {
-    size_t total_size_bytes = static_cast<size_t>(12) * 1024 * 1024 * 1024; // 6GB
+    size_t total_size_bytes = static_cast<size_t>(8) * 1024 * 1024 * 1024; // 5GB
     size_t block_size_bytes = 16 * 1024; // 16KB per block
     size_t n_blocks = total_size_bytes / block_size_bytes;
     size_t block_size = 256; // Threads per block
-    size_t grid_size = n_blocks;
+    size_t grid_size = n_blocks ;
 
     float* data;
     cudaMalloc((void**)&data, total_size_bytes);
     cudaMemset(data, 0, total_size_bytes);
 
     int errors = 0;
-    float elapsed_time = 0.0;
+    float elapsed_time = 0.0f;
 
-    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time);
+    printf("Running Test 1...\n");
+    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 1);
+    printf("Test 1 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
-    std::cout << "Detected " << errors << " errors." << std::endl;
-    std::cout << "Elapsed time: " << elapsed_time / 1000 << " s" << std::endl;
+    errors = 0;
+    printf("Running Test 2...\n");
+    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 2);
+    printf("Test 2 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
-    float* h_data = new float[total_size_bytes / sizeof(float)];
-    cudaMemcpy(h_data, data, total_size_bytes, cudaMemcpyDeviceToHost);
-    
-    std::ofstream outfile;
-    outfile.open("data.txt");
-    for (size_t i = 0; i < block_size_bytes; ++i) {
-        outfile << "Data[" << i << "]: " << h_data[i] << std::endl;
-    }
-    outfile.close();
-
+    errors = 0;
+    printf("Running Test 3...\n");
+    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 3);
+    printf("Test 3 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
     cudaFree(data);
     cudaDeviceReset();
