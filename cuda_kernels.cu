@@ -61,6 +61,7 @@ __global__ void verify_one_blocks_kernel(float* data, size_t block_size, size_t 
 }
 
 
+// Main CUDA kernel used to run all the tests
 void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t grid_size, size_t block_size, int* host_errors, float* elapsed_time, int test_type) {
     cudaEvent_t start, stop;
     cudaEventCreate(&start);
@@ -90,24 +91,27 @@ void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t g
     else if (test_type == 2) {
         // Test 2：write and verify blocks with even and odd index
         initialize_to_one<<<grid_size, block_size>>>(data, block_size_bytes, n_blocks);
-
+        cudaDeviceSynchronize();
         for (int j = 0; j < 1000; j++) {
             rand_write_kernel<<<grid_size, block_size>>>(data, block_size_bytes, n_blocks, time(NULL) + j);
             cudaDeviceSynchronize();
         }
         verify_one_blocks_kernel<<<grid_size, block_size>>>(data, block_size_bytes, n_blocks, error_count);
+        cudaDeviceSynchronize();
     }
     else if (test_type == 3) {
         // Test 3: write the value and wait for 10 minutes
         float test_value = 1.0f;
         size_t total_elements = block_size_bytes * n_blocks;
         size_t grid_size = total_elements / block_size;
-        simple_write_kernel<<<grid_size, block_size>>>(data, block_size_bytes / sizeof(float), test_value);
-
+        simple_write_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), test_value);
+        cudaDeviceSynchronize();
+        
         printf("Waiting for 10 minutes...\n");
         std::this_thread::sleep_for(std::chrono::minutes(10)); 
 
-        simple_read_and_compare_kernel<<<grid_size, block_size>>>(data, block_size_bytes / sizeof(float), test_value, error_count);
+        simple_read_and_compare_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), test_value, error_count);
+        cudaDeviceSynchronize();
     }
     
     // Stop timing
