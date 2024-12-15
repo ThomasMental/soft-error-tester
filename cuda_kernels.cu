@@ -60,6 +60,39 @@ __global__ void verify_one_blocks_kernel(float* data, size_t block_size, size_t 
     }
 }
 
+// Reverse bits
+__device__ unsigned int reverseBits(unsigned int n) {
+    unsigned int reversed = 0;
+    for (int i = 0; i < 32; i++) {
+        reversed <<= 1;               // Shift the bits of the result left.
+        reversed |= (n & 1);          // Add the least significant bit of n to reversed.
+        n >>= 1;                      // Shift the bits of n right.
+    }
+    return reversed;
+}
+
+__global__ void reverse_bits_kernel(float* data, int n_elements) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n_elements) {
+        // change the type from float* to unsigned int
+        unsigned int* bits = reinterpret_cast<unsigned int*>(&data[idx]);
+        unsigned int reversedBits = reverseBits(*bits);
+        *bits = reversedBits;
+    }
+}
+
+__global__ void verify_reverse_bits_kernel(float* data, int n_elements, int* error_count) {
+    int idx = blockIdx.x * blockDim.x + threadIdx.x;
+    if (idx < n_elements) {
+        unsigned int* bits = reinterpret_cast<unsigned int*>(&data[idx]);
+        unsigned int reversedBits = reverseBits(*bits);
+        unsigned int revertedBits = reverseBits(reversedBits);
+        if (revertedBits != *bits) {
+            atomicAdd(error_count, 1);
+        }
+    }
+}
+
 
 // Main CUDA kernel used to run all the tests
 void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t grid_size, size_t block_size, int* host_errors, float* elapsed_time, int test_type) {
@@ -112,6 +145,16 @@ void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t g
 
         simple_read_and_compare_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), test_value, error_count);
         cudaDeviceSynchronize();
+    }
+    else if(test_type == 4) {
+        for (int j = 0; j < 1000; j++) {
+            size_t total_elements = block_size_bytes * n_blocks;
+            size_t grid_size = total_elements / block_size;
+            reverse_bits_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float));
+            cudaDeviceSynchronize();
+            verify_reverse_bits_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), error_count);
+            cudaDeviceSynchronize();
+        }
     }
     
     // Stop timing

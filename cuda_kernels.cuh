@@ -18,6 +18,15 @@ __global__ void rand_write_kernel(float* data, size_t block_size, size_t n_block
 // verify the value of block is 1
 __global__ void verify_one_blocks_kernel(float* data, size_t block_size, size_t n_blocks, int* error_count);
 
+// reverse the bits for one interger
+__device__ unsigned int reverseBits(unsigned int n);
+
+// set the value and reverse the bits
+__global__ void reverse_bits_kernel(float* data, int n_elements);
+
+// verify the reversed bits
+__global__ void verify_reverse_bits_kernel(float* data, int n_elements, int* error_count);
+
 // main kernel program
 void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t grid_size, size_t block_size, int* host_errors, float* elapsed_time, int test_type);
 

@@ -7,15 +7,21 @@ int main(int argc, char** argv) {
     // default value
     int gpu_id = 0; 
     size_t total_size_bytes = static_cast<size_t>(8) * 1024 * 1024 * 1024; // 8GB
+    int n_iterations = 1;
 
     // parse the arguments
     for (int i = 1; i < argc; ++i) {
         std::string arg = argv[i];
         if (arg.find("--gpu_id=") == 0) {
             gpu_id = std::stoi(arg.substr(9)); 
-        } else if (arg.find("--total_data=") == 0) {
+        } 
+        else if (arg.find("--total_data=") == 0) {
             total_size_bytes = static_cast<size_t>(std::stoll(arg.substr(13))) * 1024 * 1024; 
-        } else {
+        } 
+        else if (arg.find("-n=") == 0) {
+            n_iterations = std::stoi(arg.substr(3));
+        } 
+        else {
             std::cerr << "Unknown argument: " << arg << std::endl;
             return 1;
         }
@@ -32,27 +38,32 @@ int main(int argc, char** argv) {
 
     float* data;
     cudaMalloc((void**)&data, total_size_bytes);
-    cudaMemset(data, 0, total_size_bytes);
+    for(int i = 0; i < n_iterations; i++) {
+        cudaMemset(data, 0, total_size_bytes);
+        int errors = 0;
+        float elapsed_time = 0.0f;
 
-    int errors = 0;
-    float elapsed_time = 0.0f;
+        printf("Running Test 1...\n");
+        run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 1);
+        printf("Test 1 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
-    printf("Running Test 1...\n");
-    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 1);
-    printf("Test 1 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
+        errors = 0;
+        printf("Running Test 2...\n");
+        run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 2);
+        printf("Test 2 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
-    errors = 0;
-    printf("Running Test 2...\n");
-    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 2);
-    printf("Test 2 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
+        errors = 0;
+        printf("Running Test 3...\n");
+        run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 3);
+        printf("Test 3 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
 
-    errors = 0;
-    printf("Running Test 3...\n");
-    run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 3);
-    printf("Test 3 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
-
+        errors = 0;
+        printf("Running Test 4...\n");
+        run_kernels(data, block_size_bytes, n_blocks, grid_size, block_size, &errors, &elapsed_time, 4);
+        printf("Test 4 Errors: %d, Time Elapsed: %.2f s\n", errors, elapsed_time / 1000.0);
+    }
+    
     cudaFree(data);
     cudaDeviceReset();
-
     return 0;
 }
