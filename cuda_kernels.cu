@@ -141,9 +141,11 @@ void run_kernels(float* data, size_t block_size_bytes, size_t n_blocks, size_t g
         cudaDeviceSynchronize();
         
         printf("Waiting for 10 minutes...\n");
-        std::this_thread::sleep_for(std::chrono::minutes(10)); 
-
-        simple_read_and_compare_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), test_value, error_count);
+        for(int i = 0; i < 600; i++) {
+            simple_read_and_compare_kernel<<<grid_size, block_size>>>(data, total_elements / sizeof(float), test_value, error_count);
+            cudaDeviceSynchronize();
+            std::this_thread::sleep_for(std::chrono::seconds(1)); 
+        }
         cudaDeviceSynchronize();
     }
     else if(test_type == 4) {
